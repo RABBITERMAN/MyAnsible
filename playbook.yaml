@@ -1,0 +1,72 @@
+---
+  - hosts: all
+    gather_facts: yes
+    serial: 10
+    tasks:
+      - name : apt upgrade
+        become : yes
+        apt : 
+          update_cache : yes
+          upgrade : full
+        when: false
+
+  - hosts: docker
+    gather_facts : yes
+    vars:
+      docker_pakages_to_remove:
+        - docker
+        - docker.io
+        - docker-engine
+        - containerd
+        - runc
+      docker_prerequired_pakages_to_install:
+        - gnupg
+        - curl
+        - ca-certificates
+
+    tasks: 
+
+#      - name : show gather facts
+#        debug:
+#          var: ansible_facts
+
+
+      - name : show gather_facts_msg
+        debug:
+#          msg: "{{ ansible_facts['architecture'] }}  -  {{ ansible_facts['lsb']['codename'] }}" 
+#          msg: [arch = "{{ "amd64 if ansible_facts['architecture' == "x86_64" else  "i386" }}" ] https://download.docker.com/linux/ubuntu {{ ansible_facts['lsb']['codename'] }} stabl
+           msg: "{{ 'amd64' if ansible_facts['architecture'] == 'x86_64' else  'i386' }}"
+
+                   
+#ansible_facts['architecture']
+
+
+      - name : uninstall old docker pakages
+        become : yes
+        apt :
+          name : "{{ item }}"
+          state: absent
+        with_items: "{{ docker_pakages_to_remove }}"
+#        when: false
+
+      - name : install prerequired  docker pakages
+        become : yes
+        apt :
+          name : "{{ item }}"
+          state: present 
+        loop: "{{ docker_prerequired_pakages_to_install }}"
+#        when: false
+
+      - name : install  docker repo key
+        become : yes
+        apt_key :
+          url : https://download.docker.com/linux/ubuntu/gpg
+#        when: false
+
+      - name : add docker apt repo
+        become : yes
+        apt_repository :
+          repo: deb [arch="{{ 'amd64' if ansible_facts['architecture'] == 'x86_64' else 'i386' }}"] https://download.docker.com/linux/ubuntu {{ ansible_facts['lsb']['codename'] }} stable
+          state: present
+#        when : false
+
